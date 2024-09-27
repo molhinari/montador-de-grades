@@ -49,13 +49,88 @@
           <CustomButton class="border-black px-4 mr-1"
             @click="load"> Importar
           </CustomButton> 
+
+          <CustomButton class="border-black px-4 mr-1"
+            @click="showRanking = true"> Ranking
+          </CustomButton> 
           
         </div>
+        <!-- Seção ranking -->
+        <Modal v-if="showRanking" @close="showRanking = false">
+          <div class="ml-4">
+            <h2 class="text-lg font-bold mt-4 mb-4">Preencha para estimar sua posição nas matérias escolhidas:</h2>
+            <div class="flex flex-col w-full align-content-space-around justify-center gap-y-4">
+
+              <div class="flex flex-row gap-x-4 items-center">
+                <span>RA:</span>
+                <input v-model="ra" placeholder="Seu RA" class="border p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                <span class="text-red-500">*</span>
+                
+                <span>CR:</span>
+                <input v-model="cr" placeholder="Seu CR" class="border p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                <span class="text-red-500">*</span>
+              </div>
+
+              <p class="font-semibold">Selecione seu turno e o termo que está entrando:</p>
+              
+              <div class="flex flex-row gap-x-4 items-center -mt-1">
+                <div class="flex items-center">
+                  <input type="radio" id="integral" value="Integral" v-model="picked" name="turno" class="mr-1" required />
+                  <label for="integral" class="cursor-pointer">Integral</label>
+                </div>
+                <div class="flex items-center">
+                  <input type="radio" id="noturno" value="Noturno" v-model="picked" name="turno" class="mr-1" required />
+                  <label for="noturno" class="cursor-pointer">Noturno</label>
+                </div>
+
+
+                <span>Termo:</span>
+                <select v-model="selected" class="border p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                  <option disabled value="">Termo</option>
+                  <option v-for="n in 5" :key="n">{{ n+1 }}</option>
+                </select>
+                <span class="text-red-500">*</span>
+              </div>
+              <p class="font-semibold">Matérias obrigatórias que já realizou:</p>
+              <div class="flex flex-row items-center -mt-1">
+                <input type="checkbox" id="cuv" value="cuv" v-model="checkedNames" />
+                <label class="mr-4 ml-1" for="cuv">CUV</label>
+
+                <input type="checkbox" id="lp" value="lp" v-model="checkedNames" />
+                <label class="mr-4 ml-1" for="lp">LP</label>
+
+                <input type="checkbox" id="cts" value="cts" v-model="checkedNames" />
+                <label class="mr-4 ml-1" for="cts">CTS</label>
+
+                <input type="checkbox" id="fbm" value="fbm" v-model="checkedNames" />
+                <label class="mr-4 ml-1" for="fbm">FBM</label>
+
+                <input type="checkbox" id="qg" value="qg" v-model="checkedNames" />
+                <label class="mr-4 ml-1" for="qg">QG</label>
+
+                <input type="checkbox" id="ctsa" value="ctsa" v-model="checkedNames" />
+                <label class="mr-4 ml-1" for="ctsa">CTSA</label>
+
+                <input type="checkbox" id="femec" value="femec" v-model="checkedNames" />
+                <label class="mr-4 ml-1" for="femec">FEMEC</label>
+              </div>
+              <div>
+                <input type="checkbox" id="agree" value="AGREE" v-model="agree" />
+                <label for="agree"> Concordo com o uso dos dados acima para calcular minha posição. </label>
+                <span class="text-red-500">*</span>
+              </div>
+              <div>
+                <CustomButton class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition duration-300" @click="consultRanking">Consultar posição</CustomButton> 
+              </div>
+            </div>
+          </div>
+        </Modal>
+
         <span></span>
       </div>
     </div>
     <!-- Disciplinas escolhidas e disponíveis -->
-    <div class="lg:flex-0333 lg:max-w-[33%] p-3 flex-0100 w-full p-3 flex-0100">
+    <div class="lg:flex-0333 lg:max-w-[33%] p-3 flex-0100 w-full p-3 flex-0100" v-if="!showRanking">
       <div class="v-card p-2 shadow-lg">
         <div class="p-4 w-full mx-auto lg:max-w-4xl xl:max-w-7xl mx-auto flex sm:block flex-col">
           <!-- Disciplinas Escolhidas: -->
@@ -106,7 +181,7 @@
   </div>
 
   <!-- Footer -->
-  <div class="mt-3 -m-3 flex flex-auto flex-wrap flex-column align-center justify-center">
+  <div class="mt-3 -m-3 flex flex-auto flex-wrap flex-column align-center justify-center" v-if="!showRanking">
     <Alert
       v-model="alert"
       title="Problemas?"
@@ -151,6 +226,7 @@ export default {
     return {
       alert: true,
       showModal: false,
+      showRanking: false,
       tabela: Array.from({ length: 6 }, () => Array(6).fill('')),
       col: 0,
       row: 0,
@@ -158,6 +234,7 @@ export default {
       btn_state:false,
       // O controle das disciplinas será através dos ids das disciplinas
       ListaIdsSelecionadas: JSON.parse(localStorage.ListaIdsSelecionadas || '[]'),
+      checkedNames: [],
     }
   },
   computed: {
@@ -256,6 +333,38 @@ export default {
       const currentDateTime = new Date().toLocaleString().replace(',', '');
       aux.download = `SelectedUCS ${currentDateTime}.json`;
       aux.click();
+    },
+    consultRanking() {
+      if (!this.ra || !this.cr || !this.picked || !this.selected || !this.agree) {
+        alert('Por favor, preencha todos os campos obrigatórios.');
+        return;
+      }
+      if (this.ra <= 100000 || this.ra >= 999999) {
+        alert('Por favor, insira um RA válido.');
+        return;
+      }
+      if (this.cr <= 0 || this.cr >= 10) {
+        alert('Por favor, insira um CR válido (maior que 0 e menor que 10).');
+        return;
+      }
+      alert(`RA: ${this.ra}, CR: ${this.cr}, picked: ${this.picked}, selected: ${this.selected}, checked: ${this.checkedNames}`);
+      
+      let somaCreditos = 0;
+      this.checkedNames.forEach((n) => {
+        if (n == "cuv") somaCreditos += 6;
+        else if (n == "cts") somaCreditos += 2;
+        else if (n == "ctsa") somaCreditos += 2;
+        else somaCreditos += 4;
+      })
+      const dados = {
+        ra: this.ra,
+        cr: this.cr,
+        turno: this.picked,
+        termo: this.selected,
+        creditos: somaCreditos
+      }
+      let jsonUcs = JSON.stringify(this.ListaIdsSelecionadas);
+
     },
     load() {
       var inputFileDocument = document.createElement("input");
